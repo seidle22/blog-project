@@ -11,7 +11,11 @@ class Development(object):
     DEBUG = True
     TESTING = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    # SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    
+    SQLALCHEMY_DATABASE_URI = "postgresql://eliseidleblog:password@localhost:5432/blog_api_db"
+
+
 
 class Production(object):
     """
