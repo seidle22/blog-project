@@ -1,4 +1,5 @@
-from flask import request, json, Response, Blueprint
+from flask import g, jsonify, request, json, Response, Blueprint
+from marshmallow import ValidationError
 
 from src.models.UserModels import UserModel, UserSchema
 
@@ -14,10 +15,13 @@ def create():
     Create User Function
     """
     req_data = request.get_json()
-    data, error = user_schema.load(req_data)
-
-    if error:
-        return custom_response(error, 400)
+    # data, error= user_schema.load(req_data)
+    try:
+        data = user_schema.load(req_data)
+    except ValidationError as err:
+        return custom_response({"error": err.messages}, 400)
+    # if error:
+    #     return custom_response(error, 400)
 
     # check if user already exists in the db
     user_in_db = UserModel.get_user_by_email(data.get("email"))
@@ -28,9 +32,11 @@ def create():
     user = UserModel(data)
     user.save()
 
-    ser_data = user_schema.dump(user).data
-
-    token = Auth.generate_token(ser_data.get("id"))
+    ser_data = user_schema.dump(user)
+    try:
+        token = Auth.generate_token(ser_data.get("id"))
+    except RuntimeError as e:
+        print(f"Error: {e}")
 
     return custom_response({"jwt_token": token}, 201)
 
@@ -56,13 +62,15 @@ def update():
     Update me
     """
     req_data = request.get_json()
-    data, error = user_schema.load(req_data, partial=True)
-    if error:
-        return custom_response(error, 400)
+
+    try:
+        data = user_schema.load(req_data, partial=True)
+    except ValidationError as err:
+        return custom_response({"error": err.messages}, 400)
 
     user = UserModel.get_one_user(g.user.get("id"))
     user.update(data)
-    ser_user = user_schema.dump(user).data
+    ser_user = user_schema.dump(user)
     return custom_response(ser_user, 200)
 
 
@@ -84,24 +92,31 @@ def get_me():
     Get me
     """
     user = UserModel.get_one_user(g.user.get("id"))
-    ser_user = user_schema.dump(user).data
+    ser_user = user_schema.dump(user)
     return custom_response(ser_user, 200)
+
+
+# def custom_response(res, status_code):
+#     """
+#     Custom Response Function
+#     """
+#     return Response(
+#         mimetype="application/json", response=json.dumps(res), status=status_code
+#     )
 
 
 def custom_response(res, status_code):
     """
     Custom Response Function
     """
-    return Response(
-        mimetype="application/json", response=json.dumps(res), status=status_code
-    )
+    return jsonify({"data": res, "status_code": status_code})
 
 
 @user_api.route("/", methods=["GET"])
 @Auth.auth_required
 def get_all():
     users = UserModel.get_all_users()
-    ser_users = user_schema.dump(users, many=True).data
+    ser_users = user_schema.dump(users, many=True)
     return custom_response(ser_users, 200)
 
 
@@ -109,10 +124,10 @@ def get_all():
 def login():
     req_data = request.get_json()
 
-    data, error = user_schema.load(req_data, partial=True)
-
-    if error:
-        return custom_response(error, 400)
+    try:
+        data = user_schema.load(req_data, partial=True)
+    except ValidationError as err:
+        return custom_response({"error": err.messages}, 400)
 
     if not data.get("email") or not data.get("password"):
         return custom_response({"error": "you need email and password to sign in"}, 400)
@@ -125,7 +140,7 @@ def login():
     if not user.check_hash(data.get("password")):
         return custom_response({"error": "invalid credentials"}, 400)
 
-    ser_data = user_schema.dump(user).data
+    ser_data = user_schema.dump(user)
 
     token = Auth.generate_token(ser_data.get("id"))
 

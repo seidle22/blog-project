@@ -2,7 +2,7 @@ from functools import wraps
 import jwt
 import os
 import datetime
-from flask import Response, json, request
+from flask import Response, g, json, request
 from src.models.UserModels import UserModel
 
 
@@ -11,6 +11,24 @@ class Auth:
     Auth Class
     """
 
+    # @staticmethod
+    # def generate_token(user_id):
+    #     """
+    #     Generate Token Method
+    #     """
+    #     try:
+    #         payload = {
+    #             "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1),
+    #             "iat": datetime.datetime.utcnow(),
+    #             "sub": user_id,
+    #         }
+    #         return jwt.encode(payload, "xyxyxyx", "HS256").decode("utf-8")
+    #     except Exception as e:
+    #         return Response(
+    #             mimetype="application/json",
+    #             response=json.dumps({"error": "error in generating user token"}),
+    #             status=400,
+    #         )
     @staticmethod
     def generate_token(user_id):
         """
@@ -22,27 +40,22 @@ class Auth:
                 "iat": datetime.datetime.utcnow(),
                 "sub": user_id,
             }
-            return jwt.encode(payload, os.getenv("JWT_SECRET_KEY"), "HS256").decode(
-                "utf-8"
-            )
+            return jwt.encode(payload, "xyxyxyx", "HS256")
         except Exception as e:
-            return Response(
-                mimetype="application/json",
-                response=json.dumps({"error": "error in generating user token"}),
-                status=400,
-            )
+            raise RuntimeError("Error in generating user token")
 
     @staticmethod
     def decode_token(token):
         """
         Decode token method
         """
+
         re = {"data": {}, "error": {}}
         try:
-            payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY"))
+            payload = jwt.decode(token, "xyxyxyx", algorithms=["HS256"])
             re["data"] = {"user_id": payload["sub"]}
             return re
-        except jwt.ExpiredSignatureError as e1:
+        except jwt.ExpiredSignatureError as e:
             re["error"] = {"message": "token expired, please login again"}
             return re
         except jwt.InvalidTokenError:
@@ -64,7 +77,7 @@ class Auth:
                             "error": "Authentication token is not available, please login to get one"
                         }
                     ),
-                    status=400,
+                    status=403,
                 )
             token = request.headers.get("api-token")
             data = Auth.decode_token(token)
@@ -72,7 +85,7 @@ class Auth:
                 return Response(
                     mimetype="application/json",
                     response=json.dumps(data["error"]),
-                    status=400,
+                    status=403,
                 )
 
             user_id = data["data"]["user_id"]
@@ -83,7 +96,7 @@ class Auth:
                     response=json.dumps(
                         {"error": "user does not exist, invalid token"}
                     ),
-                    status=400,
+                    status=403,
                 )
             g.user = {"id": user_id}
             return func(*args, **kwargs)

@@ -15,7 +15,6 @@ services:
       - "7071"
     ports:
       - 0.0.0.0:7071:7071
-    command: bash -c " ./scripts/ssl_cert/add_zscaler_cert.sh && func start"
     depends_on:
       - db
   db:
