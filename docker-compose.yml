@@ -1,0 +1,36 @@
+version: '3'
+services:
+  api:
+    platform: linux/amd64
+    container_name: eli-blog-api
+    env_file: docker.env
+    image: "eli-blog-project"
+    build: .
+    # Run this contain as if it's in the terminal, useful for debugging
+    tty: true
+    # Mount local files into the container so we can update files inside the container
+    volumes:
+      - .:/project
+    expose:
+      - "7071"
+    ports:
+      - 0.0.0.0:7071:7071
+    command: bash -c " ./scripts/ssl_cert/add_zscaler_cert.sh && func start"
+    depends_on:
+      - db
+  db:
+    container_name: eli-blog-project
+    image: library/postgres:13-alpine
+    restart: always
+    expose:
+      - "5433"
+    ports:
+      - 0.0.0.0:5433:5433
+    volumes:
+      - ./scripts/db_setup:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=eliseidleblog
+      - POSTGRES_PASSWORD=password
+volumes:
+  db_data:

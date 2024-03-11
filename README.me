@@ -1,1 +1,19 @@
-Up to trying to conenct to postgresql and migration upgrade etc
+brew services start postgresql  
+brew services stop postgresql  
+
+python manage.py db migrate
+python manage.py db upgrade    
+
+psql postgres -U eliseidleblog    
+
+\du   -> list users and roles
+
+\list or \l    -> to list databses and owners
+
+\connect blog_api_db     -> connect to database
+
+\dt    -> to find relations in databse
+
+
+
+\q to quit
